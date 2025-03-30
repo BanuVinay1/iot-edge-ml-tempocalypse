@@ -1,0 +1,82 @@
+{
+    "modulesContent": {
+      "$edgeAgent": {
+        "properties.desired": {
+          "schemaVersion": "1.0",
+          "runtime": {
+            "type": "docker",
+            "settings": {
+              "minDockerVersion": "v1.25",
+              "loggingOptions": "",
+              "registryCredentials": {
+                "banuacr": {
+                  "address": "<<your-acr-name>>.azurecr.io",
+                  "password": "<<your-acr-pw>>",
+                  "username": "<<your-acr-name>>"
+                }
+              }
+            }
+          },
+          "systemModules": {
+            "edgeAgent": {
+              "settings": {
+                "image": "mcr.microsoft.com/azureiotedge-agent:1.1"
+              },
+              "type": "docker"
+            },
+            "edgeHub": {
+              "restartPolicy": "always",
+              "settings": {
+                "image": "mcr.microsoft.com/azureiotedge-hub:1.1"
+              },
+              "status": "running",
+              "type": "docker"
+            }
+          },
+          "modules": {
+            "temp-simulator": {
+              "restartPolicy": "always",
+              "settings": {
+                "image": "<<your-acr-name>>.azurecr.io/temp-simulator:vfinal"
+              },
+              "status": "running",
+              "type": "docker"
+            },
+            "spike-predictor": {
+              "restartPolicy": "always",
+              "settings": {
+                "image": "<<your-acr-name>>.azurecr.io/spike-predictor:latest",
+                "createOptions": "{\"HostConfig\": {\"PortBindings\": {\"5000/tcp\": [{\"HostPort\": \"5000\"}]}}}"
+              },
+              "type": "docker",
+              "env": {
+                "PYTHONUNBUFFERED": {
+                  "value": "1"
+                }
+              },
+              "status": "running"
+            }
+          }
+        }
+      },
+      "$edgeHub": {
+        "properties.desired": {
+          "schemaVersion": "1.0",
+          "routes": {
+            "simulatorToPredictor": "FROM /messages/modules/temp-simulator/outputs/output1 INTO BrokeredEndpoint(\"/modules/spike-predictor/inputs/input1\")",
+            "predictorToIoTHub": "FROM /messages/modules/spike-predictor/outputs/* INTO $upstream"
+          },
+          "storeAndForwardConfiguration": {
+            "timeToLiveSecs": 7200
+          }
+        }
+      },
+      "temp-simulator": {
+        "properties.desired": {}
+      },
+      "spike-predictor": {
+        "properties.desired": {}
+      }
+    }
+  }
+  
